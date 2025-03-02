@@ -11,10 +11,10 @@
             justify-content: center;
             align-items: center;
             margin: 0;
-            background-color: #f4f4f4;
+            background-color: #FFFFFF;
             transition: background-color 0.3s ease;
             min-height: 100vh;
-            padding-bottom: 60px; /* Input area space */
+            padding-bottom: 60px;
             overflow-x: hidden;
         }
         body.dark-theme {
@@ -27,9 +27,11 @@
         }
         body.dark-theme .bot-message {
             background-color: #555;
+            color: #fff;
         }
         body.dark-theme .user-message {
             background-color: #666;
+            color: #fff;
         }
         body.dark-theme .loading-message {
             color: #fff;
@@ -180,7 +182,7 @@
         .chat-container {
             width: 100%;
             max-width: 800px;
-            height: calc(100vh - 60px); /* Full screen height minus input area */
+            height: calc(100vh - 60px);
             border: 1px solid #ccc;
             border-radius: 10px;
             background-color: #fff;
@@ -189,7 +191,7 @@
             flex-direction: column;
             transition: background-color 0.3s ease, color 0.3s ease;
             overflow: hidden;
-            margin-top: 40px; /* Space for title */
+            margin-top: 40px;
             box-sizing: border-box;
             margin-bottom: 60px;
             position: relative;
@@ -220,7 +222,8 @@
             position: relative;
         }
         .bot-message {
-            background-color: #e0f7fa;
+            background-color: #E0E0E0;
+            color: #000000;
             padding: 8px;
             margin-bottom: 5px;
             border-radius: 10px;
@@ -230,7 +233,8 @@
             word-wrap: break-word;
         }
         .user-message {
-            background-color: #c8e6c9;
+            background-color: #007BFF;
+            color: #FFFFFF;
             padding: 8px;
             margin-bottom: 5px;
             border-radius: 10px;
@@ -335,17 +339,17 @@
             fill: #000;
         }
         .message-wrapper {
-            position: relative; /* Buttons positioning container */
-            display: flex; /* Align buttons beside text */
-            align-items: flex-start; /* Align buttons at the top */
+            position: relative;
+            display: flex;
+            align-items: flex-start;
         }
         .message-actions {
             position: absolute;
             top: 5px;
             right: 5px;
-            display: none; /* Initially hidden */
+            display: none;
             z-index: 1;
-            background-color: rgba(255,255,255,0.8); /* Background */
+            background-color: rgba(255,255,255,0.8);
             border-radius: 5px;
             padding: 5px;
         }
@@ -371,7 +375,7 @@
         .message-actions button img {
             width: 16px;
             height: 16px;
-            pointer-events: none; /* Prevent nested elements from interfering */
+            pointer-events: none;
         }
         .message-actions button.copied {
             animation: copiedAnimation 0.5s ease-in-out;
@@ -443,7 +447,7 @@
         const imageInput = document.getElementById('image-input');
         const imagePreview = document.getElementById('image-preview');
         let selectedImage = null;
-        let isProcessing = false; // Flag to prevent multiple simultaneous requests
+        let isProcessing = false;
 
         function toggleTheme() {
             isDarkTheme = !isDarkTheme;
