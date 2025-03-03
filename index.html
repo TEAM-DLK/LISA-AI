@@ -195,13 +195,6 @@
             cursor: not-allowed;
         }
 
-        #image-preview {
-            max-width: 100px;
-            max-height: 100px;
-            border-radius: 6px;
-            margin-right: 10px;
-        }
-
         .overlay {
             position: fixed;
             top: 0;
@@ -217,7 +210,6 @@
             display: block;
         }
 
-        /* Media Queries for Responsiveness */
         @media (min-width: 768px) {
             .sidebar {
                 width: 260px;
@@ -255,7 +247,7 @@
     <div class="overlay" id="sidebar-overlay"></div>
     
     <div class="container">
-        <!-- Sidebar for Mobile and Desktop -->
+        <!-- Sidebar -->
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h2>DarleneAI</h2>
@@ -275,9 +267,8 @@
             </button>
         </div>
 
-        <!-- Main Content Area -->
+        <!-- Main Content -->
         <div class="main-content">
-            <!-- Mobile Header -->
             <div class="mobile-header">
                 <button class="mobile-header-btn" id="open-sidebar">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -295,10 +286,8 @@
                 </button>
             </div>
 
-            <!-- Chat Container -->
             <div class="chat-container" id="chat-container"></div>
 
-            <!-- Input Container -->
             <div class="input-container">
                 <div class="input-wrapper">
                     <textarea 
@@ -309,18 +298,10 @@
                     <div class="icon-container">
                         <input 
                             type="file" 
-                            id="camera-input" 
-                            accept="image/*" 
-                            capture="camera" 
-                            class="hidden"
-                        >
-                        <input 
-                            type="file" 
                             id="gallery-input" 
                             accept="image/*" 
                             class="hidden"
                         >
-                        
                         <svg id="gallery-icon" class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                             <circle cx="8.5" cy="8.5" r="1.5"></circle>
@@ -328,7 +309,6 @@
                         </svg>
                     </div>
                 </div>
-                
                 <button id="send-btn" class="send-btn" disabled>
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -339,124 +319,158 @@
         </div>
     </div>
 
-    <!-- Previous HTML remains the same, just replace the entire <script> section with this -->
-<script>
-    const sidebar = document.getElementById('sidebar');
-    const sidebarOverlay = document.getElementById('sidebar-overlay');
-    const openSidebarBtn = document.getElementById('open-sidebar');
-    const closeSidebarBtn = document.getElementById('close-sidebar');
-    const newChatBtn = document.getElementById('new-chat-btn');
-    const newChatMobileBtn = document.getElementById('new-chat-mobile');
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        // Replace these with your actual API keys
+        // WARNING: Do NOT use API keys client-side in production; use a backend server
+        const GEMINI_API_KEY = 'AIzaSyB66dpDKO1WLd5tIHvsTuVryIPXiXbEedA';
+        const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY';
 
-    const chatContainer = document.getElementById('chat-container');
-    const messageInput = document.getElementById('message-input');
-    const sendBtn = document.getElementById('send-btn');
-    const cameraIcon = document.getElementById('camera-icon');
-    const galleryIcon = document.getElementById('gallery-icon');
-    const cameraInput = document.getElementById('camera-input');
-    const galleryInput = document.getElementById('gallery-input');
+        let pendingImage = null;
 
-    // Mobile Sidebar Toggle
-    function openSidebar() {
-        sidebar.classList.add('open');
-        sidebarOverlay.classList.add('show');
-    }
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebar-overlay');
+        const openSidebarBtn = document.getElementById('open-sidebar');
+        const closeSidebarBtn = document.getElementById('close-sidebar');
+        const newChatBtn = document.getElementById('new-chat-btn');
+        const newChatMobileBtn = document.getElementById('new-chat-mobile');
+        const chatContainer = document.getElementById('chat-container');
+        const messageInput = document.getElementById('message-input');
+        const sendBtn = document.getElementById('send-btn');
+        const galleryIcon = document.getElementById('gallery-icon');
+        const galleryInput = document.getElementById('gallery-input');
 
-    function closeSidebar() {
-        sidebar.classList.remove('open');
-        sidebarOverlay.classList.remove('show');
-    }
-
-    openSidebarBtn.addEventListener('click', openSidebar);
-    closeSidebarBtn.addEventListener('click', closeSidebar);
-    sidebarOverlay.addEventListener('click', closeSidebar);
-
-    // New Chat Functionality
-    function startNewChat() {
-        chatContainer.innerHTML = ''; // Clear chat
-        closeSidebar(); // Close sidebar on mobile
-    }
-
-    newChatBtn.addEventListener('click', startNewChat);
-    newChatMobileBtn.addEventListener('click', startNewChat);
-
-    // Textarea Auto-resize
-    messageInput.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = (this.scrollHeight) + 'px';
-        
-        // Enable/disable send button based on input
-        sendBtn.disabled = this.value.trim() === '';
-    });
-
-    // Add Message to Chat
-    function addMessage(text, isUser) {
-        const messageDiv = document.createElement('div');
-        messageDiv.classList.add('message', isUser ? 'user-message' : 'ai-message');
-        
-        const textElement = document.createElement('div');
-        textElement.textContent = text;
-        messageDiv.appendChild(textElement);
-
-        chatContainer.appendChild(messageDiv);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-    }
-
-    // Send Message Functionality
-    sendBtn.addEventListener('click', async () => {
-        const message = messageInput.value.trim();
-        
-        if (message === '') return;
-
-        // Add user message to chat
-        addMessage(message, true);
-
-        // Clear input
-        messageInput.value = '';
-        messageInput.style.height = 'auto';
-        sendBtn.disabled = true;
-
-        // Simulate AI response (replace with actual API call)
-        try {
-            // Simulated AI response generation
-            const aiResponse = await generateAIResponse(message);
-            
-            // Add AI message to chat
-            addMessage(aiResponse, false);
-        } catch (error) {
-            console.error('Error generating response:', error);
-            addMessage('Sorry, I couldn\'t process that message.', false);
+        // Sidebar controls
+        function openSidebar() {
+            sidebar.classList.add('open');
+            sidebarOverlay.classList.add('show');
         }
-    });
 
-    // Simulated AI Response Generation
-    async function generateAIResponse(userMessage) {
-    const apiKey = 'AIzaSyB66dpDKO1WLd5tIHvsTuVryIPXiXbEedA'; // Do NOT expose this in the frontend!
-    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+        function closeSidebar() {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('show');
+        }
 
-    const requestBody = {
-        contents: [{ role: "user", parts: [{ text: userMessage }] }]
-    };
+        openSidebarBtn.addEventListener('click', openSidebar);
+        closeSidebarBtn.addEventListener('click', closeSidebar);
+        sidebarOverlay.addEventListener('click', closeSidebar);
 
-    try {
-        const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody),
+        function startNewChat() {
+            chatContainer.innerHTML = '';
+            closeSidebar();
+        }
+
+        newChatBtn.addEventListener('click', startNewChat);
+        newChatMobileBtn.addEventListener('click', startNewChat);
+
+        // Auto-resize textarea and enable/disable send button
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            sendBtn.disabled = this.value.trim() === '' && !pendingImage;
         });
 
-        const data = await response.json();
-        if (data && data.candidates && data.candidates.length > 0) {
-            return data.candidates[0].content.parts[0].text;
-        } else {
-            return "Sorry, I couldn't process that message.";
-        }
-    } catch (error) {
-        console.error('Error fetching AI response:', error);
-        return "Sorry, an error occurred while processing your message.";
-    }
-}
+        // Gallery button functionality
+        galleryIcon.addEventListener('click', () => {
+            galleryInput.click();
+        });
 
-</script>
+        galleryInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    pendingImage = reader.result.split(',')[1]; // Get base64 part
+                    sendBtn.disabled = false;
+                    addMessage(`Image selected: <img src="data:image/jpeg;base64,${pendingImage}" alt="Selected image">`, true);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Send message or generate image
+        sendBtn.addEventListener('click', async () => {
+            const message = messageInput.value.trim();
+            const image = pendingImage;
+            pendingImage = null;
+
+            if (message === '' && !image) return;
+
+            if (message.toLowerCase().startsWith('generate image')) {
+                const prompt = message.substring('generate image'.length).trim();
+                if (prompt) {
+                    addMessage(`Generating image: ${prompt}`, true);
+                    const imageUrl = await generateImage(prompt);
+                    if (imageUrl) {
+                        addMessage(`<img src="${imageUrl}" alt="Generated image">`, false);
+                    } else {
+                        addMessage('Sorry, I couldn\'t generate the image.', false);
+                    }
+                } else {
+                    addMessage('Please provide a description for the image.', false);
+                }
+            } else {
+                if (message) addMessage(message, true);
+                if (image) addMessage(`Image sent: <img src="data:image/jpeg;base64,${image}" alt="Sent image">`, true);
+                try {
+                    const aiResponse = await generateAIResponse(message, image);
+                    addMessage(aiResponse, false);
+                } catch (error) {
+                    console.error('Error:', error);
+                    addMessage('Sorry, an error occurred.', false);
+                }
+            }
+
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            sendBtn.disabled = true;
+        });
+
+        // Gemini API for text and image recognition
+        async function generateAIResponse(text, imageBase64) {
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+            let parts = [];
+            if (text) parts.push({ text: text });
+            if (imageBase64) parts.push({ inlineData: { mimeType: "image/jpeg", data: imageBase64 } });
+            const requestBody = { contents: [{ role: "user", parts: parts }] };
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(requestBody),
+            });
+            const data = await response.json();
+            return data.candidates[0].content.parts[0].text || "Sorry, I couldn’t process that.";
+        }
+
+        // OpenAI DALL-E API for image generation
+        async function generateImage(prompt) {
+            const apiUrl = 'https://api.openai.com/v1/images/generations';
+            const requestBody = { prompt: prompt, n: 1, size: "512x512" };
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`
+                    },
+                    body: JSON.stringify(requestBody),
+                });
+                const data = await response.json();
+                return data.data[0].url || null;
+            } catch (error) {
+                console.error('Image generation error:', error);
+                return null;
+            }
+        }
+
+        // Add message to chat with markdown for AI responses
+        function addMessage(content, isUser) {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', isUser ? 'user-message' : 'ai-message');
+            messageDiv.innerHTML = isUser ? content : marked.parse(content);
+            chatContainer.appendChild(messageDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+    </script>
 </body>
 </html>
