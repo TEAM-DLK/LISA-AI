@@ -390,41 +390,49 @@
 
         // Send message or generate image
         sendBtn.addEventListener('click', async () => {
-            const message = messageInput.value.trim();
-            const image = pendingImage;
-            pendingImage = null;
+    const message = messageInput.value.trim();
+    const image = pendingImage;
+    pendingImage = null;
 
-            if (message === '' && !image) return;
+    // If there's no message and no image, do nothing
+    if (message === '' && !image) return;
 
-            if (message.toLowerCase().startsWith('generate image')) {
-                const prompt = message.substring('generate image'.length).trim();
-                if (prompt) {
-                    addMessage(`Generating image: ${prompt}`, true);
-                    const imageUrl = await generateImage(prompt);
-                    if (imageUrl) {
-                        addMessage(`<img src="${imageUrl}" alt="Generated image">`, false);
-                    } else {
-                        addMessage('Sorry, I couldn\'t generate the image.', false);
-                    }
-                } else {
-                    addMessage('Please provide a description for the image.', false);
-                }
-            } else {
-                if (message) addMessage(message, true);
-                if (image) addMessage(`Image sent: <img src="data:image/jpeg;base64,${image}" alt="Sent image">`, true);
-                try {
-                    const aiResponse = await generateAIResponse(message, image);
-                    addMessage(aiResponse, false);
-                } catch (error) {
-                    console.error('Error:', error);
-                    addMessage('Sorry, an error occurred.', false);
-                }
-            }
-
+    // Handle image generation command
+    if (message.toLowerCase().startsWith('generate image')) {
+        const prompt = message.substring('generate image'.length).trim();
+        if (prompt) {
+            addMessage(`Generating image: ${prompt}`, true);
+            // Clear the input immediately after adding the message
             messageInput.value = '';
             messageInput.style.height = 'auto';
             sendBtn.disabled = true;
-        });
+            const imageUrl = await generateImage(prompt);
+            if (imageUrl) {
+                addMessage(`<img src="${imageUrl}" alt="Generated image">`, false);
+            } else {
+                addMessage('Sorry, I couldn’t generate the image.', false);
+            }
+        } else {
+            addMessage('Please provide a description for the image.', false);
+        }
+    } else {
+        // Handle regular chat message or image upload
+        if (message) addMessage(message, true);
+        if (image) addMessage(`Image sent: <img src="data:image/jpeg;base64,${image}" alt="Sent image">`, true);
+        // Clear the input immediately after adding the message(s)
+        messageInput.value = '';
+        messageInput.style.height = 'auto';
+        sendBtn.disabled = true;
+        // Now proceed with the API call
+        try {
+            const aiResponse = await generateAIResponse(message, image);
+            addMessage(aiResponse, false);
+        } catch (error) {
+            console.error('Error:', error);
+            addMessage('Sorry, an error occurred.', false);
+        }
+    }
+});
 
         // Gemini API for text and image recognition
         async function generateAIResponse(text, imageBase64) {
