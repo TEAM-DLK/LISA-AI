@@ -42,10 +42,7 @@
         .markdown-content a {
             color: #0000ff;
         }
-        .markdown-content ul {
-            margin-left: 20px;
-        }
-        .markdown-content ol {
+        .markdown-content ul, .markdown-content ol {
             margin-left: 20px;
         }
         .markdown-content blockquote {
@@ -197,11 +194,8 @@
             position: relative;
         }
         @media (max-width: 600px) {
-            .chat-container {
+            .chat-container, .top-bar {
                 border-radius: 0;
-                max-width: 100%;
-            }
-            .top-bar {
                 max-width: 100%;
             }
         }
@@ -220,6 +214,8 @@
             animation: fadeIn 0.3s ease-out forwards;
             display: flex;
             position: relative;
+            max-width: 70%;
+            word-wrap: break-word;
         }
         .bot-message {
             background-color: #E0E0E0;
@@ -229,8 +225,6 @@
             border-radius: 10px;
             align-self: flex-start;
             transition: background-color 0.3s ease;
-            max-width: 70%;
-            word-wrap: break-word;
         }
         .user-message {
             background-color: #007BFF;
@@ -240,8 +234,6 @@
             border-radius: 10px;
             align-self: flex-end;
             transition: background-color 0.3s ease;
-            max-width: 70%;
-            word-wrap: break-word;
         }
         @keyframes fadeIn {
             to {
@@ -338,6 +330,19 @@
         body.dark-theme #send-button svg {
             fill: #000;
         }
+        #modelSelect, #recordVoice {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            background-color: #eee;
+            cursor: pointer;
+        }
+        body.dark-theme #modelSelect, body.dark-theme #recordVoice {
+            background-color: #444;
+            border-color: #555;
+            color: #fff;
+        }
         .message-wrapper {
             position: relative;
             display: flex;
@@ -416,7 +421,16 @@
             <input type="file" id="image-input" accept="image/*" style="display:none">
         </div>
         <img src="" id="image-preview" style="display: none;">
+        <select id="modelSelect">
+            <option value="llama">Llama</option>
+            <option value="deepseek">Deepseek</option>
+            <option value="blackbox">Blackbox</option>
+            <option value="chatgpt">ChatGPT</option>
+            <option value="wormgpt">WormGPT</option>
+            <option value="evilgpt">EvilGPT</option>
+        </select>
         <input type="text" id="user-input" placeholder="Message...">
+        <button id="recordVoice">Send Voice Message</button>
         <div id="send-button">
             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
                 <path d="M11.293 5.293a1 1 0 0 1 1.414 0l5 5a1 1 0 0 1 -1.414 1.414L13 8.414V18a1 1 0 1 1 -2 0V8.414l-3.293 3.293a1 1 0 0 1 -1.414 -1.414l5 -5Z" />
@@ -437,17 +451,18 @@
         const overlay = document.querySelector('.overlay');
         const newChatButton = document.getElementById('new-chat-button');
         const newChatDrawerButton = document.getElementById('new-chat-drawer');
-        const GEMINI_API_KEY = 'AIzaSyB66dpDKO1WLd5tIHvsTuVryIPXiXbEedA';
-        const MODEL_NAME = "gemini-2.0-flash-exp";
+        const recordVoiceButton = document.getElementById('recordVoice');
         let isDarkTheme = false;
         let chatHistory = [];
-        let startX = 0;
         let touchStartX = 0;
         const plusButton = document.querySelector('.input-area .plus-button');
         const imageInput = document.getElementById('image-input');
         const imagePreview = document.getElementById('image-preview');
         let selectedImage = null;
         let isProcessing = false;
+        let mediaRecorder;
+        let audioChunks = [];
+        let recognition;
 
         function toggleTheme() {
             isDarkTheme = !isDarkTheme;
@@ -621,19 +636,18 @@
             });
         }
 
-        async function fetchWithTimeout(url, options = {}, timeout = 30000) {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), timeout);
+        async function sendMessage(prompt) {
+            const selectedModel = document.getElementById("modelSelect").value;
+            const url = `https://dev-apis-xyz.pantheonsite.io/wp-content/apis/freeAi.php?prompt=${encodeURIComponent(prompt)}&model=${selectedModel}`;
             try {
-                const response = await fetch(url, { ...options, signal: controller.signal });
-                clearTimeout(timeoutId);
-                return response;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error(`API error: ${response.status}`);
+                const data = await response.text(); // Adjust based on API response format
+                addMessage(data, "bot");
+                chatHistory.push({ text: data, sender: "bot" });
             } catch (error) {
-                clearTimeout(timeoutId);
-                if (error.name === 'AbortError') {
-                    throw new Error('Request timed out');
-                }
-                throw error;
+                addMessage("An error occurred: " + error.message, "bot");
+                console.error("Error fetching data from the API:", error);
             }
         }
 
@@ -662,81 +676,13 @@
                     removeLoadingMessage(loading);
                 }
 
-                if (userMessage || imageUri) {
+                if (userMessage) {
+                    addMessage(userMessage, "user");
+                    chatHistory.push({ text: userMessage, sender: "user" });
                     userInput.value = '';
-                    let loading;
-                    const generateIndex = userMessage?.toLowerCase()?.indexOf("generate") ?? -1;
-                    const imagineIndex = userMessage?.toLowerCase()?.indexOf("imagine") ?? -1;
-                    const sendButtonSvg = sendButton.querySelector('svg path');
-                    sendButtonSvg.setAttribute('d', 'M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10 -4.477 10 -10 10S2 17.523 2 12Zm7.5 -3.5a1 1 0 0 0 -1 1v5a1 1 0 0 0 1 1h5a1 1 0 0 0 1 -1v-5a1 1 0 0 0 -1 -1h-5Z');
-
-                    if (generateIndex !== -1 || imagineIndex !== -1) {
-                        loading = addLoadingMessage(true);
-                        try {
-                            const prompt = userMessage.substring(Math.max(generateIndex, imagineIndex) + (generateIndex !== -1 ? "generate".length : "imagine".length)).trim();
-                            const seed = Math.floor(Math.random() * 1000000);
-                            const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?seed=${seed}`;
-                            const response = await fetchWithTimeout(imageUrl, {}, 30000);
-                            if (!response.ok) {
-                                throw new Error(`API error: ${response.status}`);
-                            }
-                            addMessage(imageUrl, 'bot', true);
-                            chatHistory.push({ text: imageUrl, sender: "bot", isImage: true });
-                            chatHistory.push({ role: "model", parts: [{ text: imageUrl }] });
-                        } catch (error) {
-                            addMessage("Failed to generate image: " + error, "bot");
-                        }
-                        removeLoadingMessage(loading);
-                        sendButtonSvg.setAttribute('d', 'M11.293 5.293a1 1 0 0 1 1.414 0l5 5a1 1 0 0 1 -1.414 1.414L13 8.414V18a1 1 0 1 1 -2 0V8.414l-3.293 3.293a1 1 0 0 1 -1.414 -1.414l5 -5Z');
-                    } else {
-                        loading = addLoadingMessage(false);
-                        let requestContents = chatHistory.filter(item => item.role);
-                        let parts = [];
-                        if (imageUri) {
-                            parts.push({
-                                fileData: {
-                                    fileUri: imageUri,
-                                    mimeType: 'image/jpeg'
-                                }
-                            });
-                        }
-                        if (userMessage) {
-                            parts.push({ text: userMessage });
-                            chatHistory.push({ text: userMessage, sender: "user" });
-                        }
-                        if (parts.length > 0) {
-                            requestContents.push({ role: "user", parts: parts });
-                        }
-                        try {
-                            const response = await fetchWithTimeout(
-                                `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-                                {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({ contents: requestContents })
-                                },
-                                30000
-                            );
-                            if (!response.ok) {
-                                const errorData = await response.json();
-                                throw new Error(`API error: ${response.status} - ${JSON.stringify(errorData)}`);
-                            }
-                            const data = await response.json();
-                            try {
-                                const botText = data.candidates[0].content.parts[0].text;
-                                addMessage(botText, 'bot');
-                                chatHistory.push({ text: botText, sender: "bot" });
-                                chatHistory.push({ role: "model", parts: [{ text: botText }] });
-                            } catch (err) {
-                                addMessage("The response from the AI was empty.", "bot");
-                            }
-                        } catch (error) {
-                            addMessage("An error occurred: " + error.message, "bot");
-                            console.error("Error fetching data from the API:", error);
-                        }
-                        removeLoadingMessage(loading);
-                        sendButtonSvg.setAttribute('d', 'M11.293 5.293a1 1 0 0 1 1.414 0l5 5a1 1 0 0 1 -1.414 1.414L13 8.414V18a1 1 0 1 1 -2 0V8.414l-3.293 3.293a1 1 0 0 1 -1.414 -1.414l5 -5Z');
-                    }
+                    let loading = addLoadingMessage(false);
+                    await sendMessage(userMessage);
+                    removeLoadingMessage(loading);
                 }
             } finally {
                 isProcessing = false;
@@ -759,7 +705,7 @@
         }
 
         async function uploadImage(file) {
-            const apiKey = GEMINI_API_KEY;
+            const apiKey = 'AIzaSyB66dpDKO1WLd5tIHvsTuVryIPXiXbEedA';
             const mimeType = file.type;
             const filename = `user_upload_${Date.now()}.${mimeType.split('/')[1]}`;
             try {
@@ -773,13 +719,13 @@
                     'Content-Type': 'application/json',
                 };
 
-                const uploadResponse = await fetchWithTimeout(uploadUrl, {
+                const uploadResponse = await fetch(uploadUrl, {
                     method: 'POST',
                     headers: headers,
                     body: JSON.stringify({
                         file: { display_name: filename }
                     }),
-                }, 30000);
+                });
 
                 if (!uploadResponse.ok) {
                     throw new Error(`File upload error: ${uploadResponse.status} - ${uploadResponse.statusText}`);
@@ -788,14 +734,14 @@
                 const uploadUri = uploadData.file.uri;
                 const uploadBinaryUrl = `${uploadUrl}&upload_id=${uploadData.upload_id}`;
 
-                const binaryResponse = await fetchWithTimeout(uploadBinaryUrl, {
+                const binaryResponse = await fetch(uploadBinaryUrl, {
                     method: 'POST',
                     headers: {
                         'X-Goog-Upload-Command': 'upload, finalize',
                         'Content-Type': 'application/octet-stream',
                     },
                     body: arrayBuffer,
-                }, 30000);
+                });
 
                 if (!binaryResponse.ok) {
                     throw new Error(`Binary data upload error: ${binaryResponse.status} - ${binaryResponse.statusText}`);
@@ -805,6 +751,47 @@
             } catch (error) {
                 console.error("Image upload failed:", error);
                 throw error;
+            }
+        }
+
+        recordVoiceButton.addEventListener("click", () => {
+            if (!mediaRecorder || mediaRecorder.state === "inactive") {
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                    mediaRecorder.onstop = () => {
+                        const audioBlob = new Blob(audioChunks);
+                        transcribeAudio(audioBlob);
+                        audioChunks = [];
+                    };
+                    mediaRecorder.start();
+                    recordVoiceButton.textContent = "Stop Recording";
+                }).catch(err => {
+                    console.error("Error accessing microphone:", err);
+                    alert("Unable to access microphone. Please check permissions.");
+                });
+            } else {
+                mediaRecorder.stop();
+                recordVoiceButton.textContent = "Send Voice Message";
+            }
+        });
+
+        function transcribeAudio(audioBlob) {
+            if ("SpeechRecognition" in window || "webkitSpeechRecognition" in window) {
+                recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                recognition.onresult = event => {
+                    const transcript = event.results[0][0].transcript;
+                    addMessage(transcript, "user");
+                    chatHistory.push({ text: transcript, sender: "user" });
+                    sendMessage(transcript);
+                };
+                recognition.onerror = err => {
+                    console.error("Speech recognition error:", err);
+                    addMessage("Failed to transcribe voice message.", "bot");
+                };
+                recognition.start();
+            } else {
+                alert("Speech recognition not supported in this browser.");
             }
         }
 
@@ -832,6 +819,7 @@
                 toggleDrawer(event);
             }
         });
+
         loadChatHistory();
         sendButton.addEventListener('click', handleUserInput);
         userInput.addEventListener('keydown', (event) => {
