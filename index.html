@@ -436,29 +436,29 @@
 
     // Simulated AI Response Generation
     async function generateAIResponse(userMessage) {
-        // This is a placeholder. Replace with actual AI API call
-        const responses = [
-            'That\'s interesting! Tell me more.',
-            'I understand. How can I help you further?',
-            'Interesting point. What are your thoughts on that?',
-            'I\'m here to assist you. What would you like to know?',
-            'Can you elaborate on that?'
-        ];
+    const apiKey = 'AIzaSyB66dpDKO1WLd5tIHvsTuVryIPXiXbEedA'; // Replace with your actual API key
+    const apiUrl = 'https://api.gemini-2.0-flash-exp.com/chat'; // Replace with the actual API endpoint
 
-        // Simulate processing time
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                message: userMessage,
+                // Add other required parameters as per the API documentation
+            })
+        });
 
-        // Return a random response
-        return responses[Math.floor(Math.random() * responses.length)];
+        const data = await response.json();
+        return data.response; // Adjust based on the API response structure
+    } catch (error) {
+        console.error('Error fetching AI response:', error);
+        return 'Sorry, I couldn\'t process that message.';
     }
-
-    // Send message on Enter key (optional)
-    messageInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            sendBtn.click();
-        }
-    });
+}
 </script>
 </body>
 </html>
