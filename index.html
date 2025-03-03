@@ -341,6 +341,38 @@
 
     <!-- Previous HTML remains the same, just replace the entire <script> section with this -->
 <script>
+
+galleryIcon.addEventListener('click', () => {
+    galleryInput.click(); // Open file picker
+});
+
+// Handle image selection
+galleryInput.addEventListener('change', function (event) {
+    if (event.target.files.length > 0) {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+
+        reader.onload = function (e) {
+            addImageMessage(e.target.result, true);
+        };
+
+        reader.readAsDataURL(file);
+    }
+});
+
+// Function to add images to chat
+function addImageMessage(imageSrc, isUser) {
+    const messageDiv = document.createElement('div');
+    messageDiv.classList.add('message', isUser ? 'user-message' : 'ai-message');
+
+    const imgElement = document.createElement('img');
+    imgElement.src = imageSrc;
+    messageDiv.appendChild(imgElement);
+
+    chatContainer.appendChild(messageDiv);
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
     const sidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebar-overlay');
     const openSidebarBtn = document.getElementById('open-sidebar');
