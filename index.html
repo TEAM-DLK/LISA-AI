@@ -7,14 +7,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <style>
         :root {
-          --bg-primary: #111B21; /* WhatsApp background */
-            --bg-secondary: #0B141A; /* Chat background */
-            --text-primary: #E9EDEF; /* Main text color */
-            --text-secondary: #8696A0; /* Secondary text color */
-            --border-color: #2A3942; /* Border color */
-            --accent-color: #25D366; /* WhatsApp green */
-            --user-message-bg: #005C4B; /* WhatsApp sent message bubble */
-            --ai-message-bg: #202C33; /* WhatsApp received message bubble */
+            --bg-primary: #111B21;
+            --bg-secondary: #0B141A;
+            --text-primary: #E9EDEF;
+            --text-secondary: #8696A0;
+            --border-color: #2A3942;
+            --accent-color: #25D366;
+            --user-message-bg: #005C4B;
+            --ai-message-bg: #202C33;
         }
 
         * {
@@ -296,16 +296,14 @@
                         rows="1"
                     ></textarea>
                     <div class="icon-container">
-                        <input 
-                            type="file" 
-                            id="gallery-input" 
-                            accept="image/*" 
-                            class="hidden"
-                        >
+                        <input type="file" id="gallery-input" accept="image/*" class="hidden">
                         <svg id="gallery-icon" class="icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                             <circle cx="8.5" cy="8.5" r="1.5"></circle>
                             <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                        <svg id="checkmark-icon" class="icon hidden" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
                     </div>
                 </div>
@@ -324,7 +322,7 @@
         // Replace these with your actual API keys
         // WARNING: Do NOT use API keys client-side in production; use a backend server
         const GEMINI_API_KEY = 'AIzaSyB66dpDKO1WLd5tIHvsTuVryIPXiXbEedA';
-        const OPENAI_API_KEY = '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';
+        const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY';
 
         let pendingImage = null;
 
@@ -338,6 +336,7 @@
         const messageInput = document.getElementById('message-input');
         const sendBtn = document.getElementById('send-btn');
         const galleryIcon = document.getElementById('gallery-icon');
+        const checkmarkIcon = document.getElementById('checkmark-icon');
         const galleryInput = document.getElementById('gallery-input');
 
         // Sidebar controls
@@ -382,57 +381,71 @@
                 reader.onload = () => {
                     pendingImage = reader.result.split(',')[1]; // Get base64 part
                     sendBtn.disabled = false;
-                    addMessage(`Image selected: <img src="data:image/jpeg;base64,${pendingImage}" alt="Selected image">`, true);
+                    galleryIcon.classList.add('hidden');
+                    checkmarkIcon.classList.remove('hidden');
+                    messageInput.placeholder = 'Add a message to your image...';
                 };
                 reader.readAsDataURL(file);
             }
         });
 
+        // Checkmark to cancel image selection
+        checkmarkIcon.addEventListener('click', () => {
+            pendingImage = null;
+            galleryIcon.classList.remove('hidden');
+            checkmarkIcon.classList.add('hidden');
+            messageInput.placeholder = 'Send a message';
+            galleryInput.value = '';
+            sendBtn.disabled = messageInput.value.trim() === '';
+        });
+
         // Send message or generate image
         sendBtn.addEventListener('click', async () => {
-    const message = messageInput.value.trim();
-    const image = pendingImage;
-    pendingImage = null;
+            const message = messageInput.value.trim();
+            const image = pendingImage;
+            pendingImage = null;
 
-    // If there's no message and no image, do nothing
-    if (message === '' && !image) return;
+            // Combine text and image into a single message
+            if (message || image) {
+                let content = '';
+                if (message) content += `<p>${message}</p>`;
+                if (image) content += `<img src="data:image/jpeg;base64,${image}" alt="Sent image">`;
+                addMessage(content, true);
+            }
 
-    // Handle image generation command
-    if (message.toLowerCase().startsWith('generate image')) {
-        const prompt = message.substring('generate image'.length).trim();
-        if (prompt) {
-            addMessage(`Generating image: ${prompt}`, true);
-            // Clear the input immediately after adding the message
             messageInput.value = '';
             messageInput.style.height = 'auto';
             sendBtn.disabled = true;
-            const imageUrl = await generateImage(prompt);
-            if (imageUrl) {
-                addMessage(`<img src="${imageUrl}" alt="Generated image">`, false);
+            galleryIcon.classList.remove('hidden');
+            checkmarkIcon.classList.add('hidden');
+            messageInput.placeholder = 'Send a message';
+            galleryInput.value = '';
+
+            // Handle image generation command
+            if (message.toLowerCase().startsWith('generate image')) {
+                const prompt = message.substring('generate image'.length).trim();
+                if (prompt) {
+                    addMessage(`Generating image: ${prompt}`, true);
+                    const imageUrl = await generateImage(prompt);
+                    if (imageUrl) {
+                        addMessage(`<img src="${imageUrl}" alt="Generated image">`, false);
+                    } else {
+                        addMessage('Sorry, I couldn’t generate the image.', false);
+                    }
+                } else {
+                    addMessage('Please provide a description for the image.', false);
+                }
             } else {
-                addMessage('Sorry, I couldn’t generate the image.', false);
+                // Handle regular chat message or image upload
+                try {
+                    const aiResponse = await generateAIResponse(message, image);
+                    addMessage(aiResponse, false);
+                } catch (error) {
+                    console.error('Error:', error);
+                    addMessage('Sorry, an error occurred.', false);
+                }
             }
-        } else {
-            addMessage('Please provide a description for the image.', false);
-        }
-    } else {
-        // Handle regular chat message or image upload
-        if (message) addMessage(message, true);
-        if (image) addMessage(`Image sent: <img src="data:image/jpeg;base64,${image}" alt="Sent image">`, true);
-        // Clear the input immediately after adding the message(s)
-        messageInput.value = '';
-        messageInput.style.height = 'auto';
-        sendBtn.disabled = true;
-        // Now proceed with the API call
-        try {
-            const aiResponse = await generateAIResponse(message, image);
-            addMessage(aiResponse, false);
-        } catch (error) {
-            console.error('Error:', error);
-            addMessage('Sorry, an error occurred.', false);
-        }
-    }
-});
+        });
 
         // Gemini API for text and image recognition
         async function generateAIResponse(text, imageBase64) {
