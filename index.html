@@ -437,7 +437,7 @@
     // Simulated AI Response Generation
     async function generateAIResponse(userMessage) {
     const apiKey = 'AIzaSyB66dpDKO1WLd5tIHvsTuVryIPXiXbEedA'; // Replace with your actual API key
-    const apiUrl = 'https://api.gemini-2.0-flash-exp.com/chat'; // Replace with the actual API endpoint
+    const apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key='; // Replace with the actual API endpoint
 
     try {
         const response = await fetch(apiUrl, {
