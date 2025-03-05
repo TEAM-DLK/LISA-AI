@@ -1,6 +1,6 @@
 # LISA AI - Chatbot
 
-[LISA AI](t.me/LISAv1BOT/LisaAi) is an interactive chatbot with a sleek UI, real-time messaging, and AI-powered responses. It supports text messages, image uploads, and AI-generated images using Gemini and OpenAI's DALL-E.
+[LISA AI](https://t.me/LISAv1BOT/LisaAi) is an interactive chatbot with a sleek UI, real-time messaging, and AI-powered responses. It supports text messages, image uploads, and AI-generated images using Gemini and OpenAI's DALL-E.
 
 ## Features
 
