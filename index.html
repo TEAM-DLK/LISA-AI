@@ -463,26 +463,24 @@
             return data.candidates[0].content.parts[0].text || "Sorry, I couldn’t process that.";
         }
 
-        // OpenAI DALL-E API for image generation
+        // 𝗖𝘆𝗯𝗲𝗿𝗹𝗶𝗻𝗲 🇱🇰 for image generation
         async function generateImage(prompt) {
-            const apiUrl = 'https://api.openai.com/v1/images/generations';
-            const requestBody = { prompt: prompt, n: 1, size: "512x512" };
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${OPENAI_API_KEY}`
-                    },
-                    body: JSON.stringify(requestBody),
-                });
-                const data = await response.json();
-                return data.data[0].url || null;
-            } catch (error) {
-                console.error('Image generation error:', error);
-                return null;
-            }
+    const apiUrl = `https://api.cyberline.info/generate-image?prompt=${encodeURIComponent(prompt)}`;
+
+    try {
+        const response = await fetch(apiUrl);
+        
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status} ${response.statusText}`);
         }
+
+        const data = await response.json();
+        return data?.url || null; // Adjust this based on the actual API response format
+    } catch (error) {
+        console.error('Image generation error:', error);
+        return null;
+    }
+}
 
         // Add message to chat with markdown for AI responses
         function addMessage(content, isUser) {
