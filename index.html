@@ -401,26 +401,51 @@
 
         // Send message or generate image
         sendBtn.addEventListener('click', async () => {
-    const message = messageInput.value.trim();
-    // ... (image upload handling omitted for brevity)
-    
-    if (message.toLowerCase().startsWith('generate image')) {
-        const prompt = message.substring('generate image'.length).trim();
-        if (prompt) {
-            addMessage(`Generating image: ${prompt}`, true);
-            const imageUrl = await generateImage(prompt);
-            if (imageUrl) {
-                addMessage(`<img src="${imageUrl}" alt="Generated image">`, false);
-            } else {
-                addMessage('Sorry, I couldn’t generate the image.', false);
+            const message = messageInput.value.trim();
+            const image = pendingImage;
+            pendingImage = null;
+
+            // Combine text and image into a single message
+            if (message || image) {
+                let content = '';
+                if (message) content += `<p>${message}</p>`;
+                if (image) content += `<img src="data:image/jpeg;base64,${image}" alt="Sent image">`;
+                addMessage(content, true);
             }
-        } else {
-            addMessage('Please provide a description for the image.', false);
-        }
-    } else {
-        // ... (Gemini API handling)
-    }
-});
+
+            messageInput.value = '';
+            messageInput.style.height = 'auto';
+            sendBtn.disabled = true;
+            galleryIcon.classList.remove('hidden');
+            checkmarkIcon.classList.add('hidden');
+            messageInput.placeholder = 'Send a message';
+            galleryInput.value = '';
+
+            // Handle image generation command
+            if (message.toLowerCase().startsWith('generate image')) {
+                const prompt = message.substring('generate image'.length).trim();
+                if (prompt) {
+                    addMessage(`Generating image: ${prompt}`, true);
+                    const imageUrl = await generateImage(prompt);
+                    if (imageUrl) {
+                        addMessage(`<img src="${imageUrl}" alt="Generated image">`, false);
+                    } else {
+                        addMessage('Sorry, I couldn’t generate the image.', false);
+                    }
+                } else {
+                    addMessage('Please provide a description for the image.', false);
+                }
+            } else {
+                // Handle regular chat message or image upload
+                try {
+                    const aiResponse = await generateAIResponse(message, image);
+                    addMessage(aiResponse, false);
+                } catch (error) {
+                    console.error('Error:', error);
+                    addMessage('Sorry, an error occurred.', false);
+                }
+            }
+        });
 
         // Gemini API for text and image recognition
         async function generateAIResponse(text, imageBase64) {
@@ -438,24 +463,26 @@
             return data.candidates[0].content.parts[0].text || "Sorry, I couldn’t process that.";
         }
 
-        // 𝗖𝘆𝗯𝗲𝗿𝗹𝗶𝗻𝗲 🇱🇰 for image generation
+        // OpenAI DALL-E API for image generation
         async function generateImage(prompt) {
-    const apiUrl = `https://api.cyberline.info/generate-image?prompt=${encodeURIComponent(prompt)}`;
-
-    try {
-        const response = await fetch(apiUrl);
-        
-        if (!response.ok) {
-            throw new Error(`API Error: ${response.status} ${response.statusText}`);
+            const apiUrl = 'https://api.openai.com/v1/images/generations';
+            const requestBody = { prompt: prompt, n: 1, size: "512x512" };
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${OPENAI_API_KEY}`
+                    },
+                    body: JSON.stringify(requestBody),
+                });
+                const data = await response.json();
+                return data.data[0].url || null;
+            } catch (error) {
+                console.error('Image generation error:', error);
+                return null;
+            }
         }
-
-        const data = await response.json();
-        return data?.url || null; // Adjust this based on the actual API response format
-    } catch (error) {
-        console.error('Image generation error:', error);
-        return null;
-    }
-}
 
         // Add message to chat with markdown for AI responses
         function addMessage(content, isUser) {
