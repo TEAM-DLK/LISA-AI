@@ -13,5 +13,3 @@
 ## Tech Stack
 
 - HTML, CSS, JavaScript
-- Google Gemini API (for chat responses)
-- OpenAI API (for image generation)
